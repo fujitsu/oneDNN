@@ -267,8 +267,37 @@ struct jit_bnorm_t : public jit_generator {
         const int mask = (1 << tail) - 1;
 
         Reg32 regw_tmp = reg_tmp.cvt32();
+#ifdef DNNL_INDIRECT_JIT_AARCH64
+        size_t data_size    = 4;
+        size_t nsimd        = 512/(4*8);
+        size_t nbit         = 64/16;
+        uint64_t tail_x86_64  = mask;
+        uint64_t tail_aarch64 = 0x000000;
+        uint16_t w_tail_aarch64[4] = { 0x0000, 0x0000, 0x0000, 0x0000 };
+        if ( nbit == 1 ) {
+            tail_aarch64 = tail_x86_64;
+        } else {
+            for ( unsigned int ii = 0; ii < nsimd; ii++ ) {
+                tail_aarch64 = tail_aarch64 + ((tail_x86_64 & 0x0001) << ii*nbit);
+                tail_x86_64 = tail_x86_64 >> 1;
+            }
+        }
+        w_tail_aarch64[0] = (uint16_t) ((tail_aarch64    ) & 0x000000000000ffff);
+        w_tail_aarch64[1] = (uint16_t) ((tail_aarch64>>16) & 0x000000000000ffff);
+        w_tail_aarch64[2] = (uint16_t) ((tail_aarch64>>32) & 0x000000000000ffff);
+        w_tail_aarch64[3] = (uint16_t) ((tail_aarch64>>48) & 0x000000000000ffff);
+        CodeGeneratorAArch64::movz(Xbyak_aarch64::XReg(regw_tmp.getIdx()), uint64_t(w_tail_aarch64[0]), 0 );
+        CodeGeneratorAArch64::movk(Xbyak_aarch64::XReg(regw_tmp.getIdx()), uint64_t(w_tail_aarch64[1]), 16);
+        CodeGeneratorAArch64::movk(Xbyak_aarch64::XReg(regw_tmp.getIdx()), uint64_t(w_tail_aarch64[2]), 32);
+        CodeGeneratorAArch64::movk(Xbyak_aarch64::XReg(regw_tmp.getIdx()), uint64_t(w_tail_aarch64[3]), 48);
+        CodeGeneratorAArch64::sub(X_TRANSLATOR_STACK, X_TRANSLATOR_STACK, 8);
+        CodeGeneratorAArch64::str(Xbyak_aarch64::XReg(regw_tmp.getIdx()), Xbyak_aarch64::ptr(X_TRANSLATOR_STACK));
+        CodeGeneratorAArch64::ldr(Xbyak_aarch64::PReg(ktail_mask.getIdx()), Xbyak_aarch64::ptr(X_TRANSLATOR_STACK));
+        CodeGeneratorAArch64::add(X_TRANSLATOR_STACK, X_TRANSLATOR_STACK, 8);
+#else
         mov(regw_tmp, mask);
         kmovw(ktail_mask, regw_tmp);
+#endif
     }
 
     void prepare_tail_mask_avx2_common() {
@@ -676,7 +705,12 @@ struct jit_bnorm_t : public jit_generator {
 
         if (stream_store_supported()) {
             Label normal_store, end_store;
+#ifdef DNNL_INDIRECT_JIT_AARCH64
+            CodeGeneratorAArch64::tst(Xbyak::Xbyak_aarch64::XReg(reg_dst.getIdx()), vlen - 1);
+            CodeGeneratorAArch64::cmp(Xbyak::Xbyak_aarch64::XReg(reg_dst.getIdx()), 0);
+#else
             test(reg_dst, vlen - 1);
+#endif
             jnz(normal_store, T_NEAR);
             compute(true);
             jmp(end_store, T_NEAR);
@@ -990,7 +1024,12 @@ struct jit_bnorm_t : public jit_generator {
 
             if (stream_store_supported()) {
                 Label normal_store, end_store;
+#ifdef DNNL_INDIRECT_JIT_AARCH64
+                CodeGeneratorAArch64::tst(Xbyak::Xbyak_aarch64::XReg(reg_dst.getIdx()), vlen - 1);
+                CodeGeneratorAArch64::cmp(Xbyak::Xbyak_aarch64::XReg(reg_dst.getIdx()), 0);
+#else
                 test(reg_dst, vlen - 1);
+#endif
                 jnz(normal_store, T_NEAR);
                 compute(true);
                 jmp(end_store, T_NEAR);
@@ -1348,7 +1387,12 @@ struct jit_bnorm_t : public jit_generator {
 
             if (stream_store_supported()) {
                 Label normal_store, end_store;
+#ifdef DNNL_INDIRECT_JIT_AARCH64
+                CodeGeneratorAArch64::tst(Xbyak::Xbyak_aarch64::XReg(reg_diff_src.getIdx()), vlen - 1);
+                CodeGeneratorAArch64::cmp(Xbyak::Xbyak_aarch64::XReg(reg_diff_src.getIdx()), 0);
+#else
                 test(reg_diff_src, vlen - 1);
+#endif
                 jnz(normal_store, T_NEAR);
                 compute(true);
                 jmp(end_store, T_NEAR);
@@ -1453,7 +1497,12 @@ struct jit_bnorm_t : public jit_generator {
 
         if (stream_store_supported()) {
             Label normal_store, end_store;
+#ifdef DNNL_INDIRECT_JIT_AARCH64
+            CodeGeneratorAArch64::tst(Xbyak::Xbyak_aarch64::XReg(reg_diff_src.getIdx()), vlen - 1);
+            CodeGeneratorAArch64::cmp(Xbyak::Xbyak_aarch64::XReg(reg_diff_src.getIdx()), 0);
+#else
             test(reg_diff_src, vlen - 1);
+#endif
             jnz(normal_store, T_NEAR);
             compute(true);
             jmp(end_store, T_NEAR);

@@ -303,9 +303,17 @@ struct jit_softmax_t<avx512_common> : public jit_softmax_base_t<avx512_common> {
 
     void prepare_tail_mask() override {
         const int mask_f32 = (1 << axis_simd_tail_) - 1;
+#ifdef DNNL_INDIRECT_JIT_AARCH64
+        CodeGeneratorAArch64::mov(Xbyak_aarch64::XReg(reg_tmp.getIdx()), uint64_t(mask_f32));
+        CodeGeneratorAArch64::sub(X_TRANSLATOR_STACK, X_TRANSLATOR_STACK, 8);
+        CodeGeneratorAArch64::str(Xbyak_aarch64::XReg(reg_tmp.getIdx()), Xbyak_aarch64::ptr(X_TRANSLATOR_STACK));
+        CodeGeneratorAArch64::ldr(Xbyak_aarch64::PReg(tail_opmask.getIdx()), Xbyak_aarch64::ptr(X_TRANSLATOR_STACK));
+        CodeGeneratorAArch64::add(X_TRANSLATOR_STACK, X_TRANSLATOR_STACK, 8);
+#else
         Reg32 regw_tmp = reg_tmp.cvt32();
         mov(regw_tmp, mask_f32);
         kmovw(tail_opmask, regw_tmp);
+#endif
     }
 
     void get_horizontal_op(const Vmm &v, const Vmm &vtmp, op_t op) override {

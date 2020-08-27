@@ -192,8 +192,37 @@ private:
 
     void prepare_mask() {
         Reg64 reg_tail = reg_tmp;
+#ifdef DNNL_INDIRECT_JIT_AARCH64
+        size_t data_size    = 4;
+        size_t nsimd        = 512/(4*8);
+        size_t nbit         = 64/16;
+        uint64_t tail_x86_64  = tail_mask_;
+        uint64_t tail_aarch64 = 0x000000;
+        uint16_t w_tail_aarch64[4] = { 0x0000, 0x0000, 0x0000, 0x0000 };
+        if ( nbit == 1 ) {
+            tail_aarch64 = tail_x86_64;
+        } else {
+            for ( unsigned int ii = 0; ii < nsimd; ii++ ) {
+                tail_aarch64 = tail_aarch64 + ((tail_x86_64 & 0x0001) << ii*nbit);
+                tail_x86_64 = tail_x86_64 >> 1;
+            }
+        }
+        w_tail_aarch64[0] = (uint16_t) ((tail_aarch64    ) & 0x000000000000ffff);
+        w_tail_aarch64[1] = (uint16_t) ((tail_aarch64>>16) & 0x000000000000ffff);
+        w_tail_aarch64[2] = (uint16_t) ((tail_aarch64>>32) & 0x000000000000ffff);
+        w_tail_aarch64[3] = (uint16_t) ((tail_aarch64>>48) & 0x000000000000ffff);
+        CodeGeneratorAArch64::movz(Xbyak_aarch64::XReg(reg_tail.cvt32().getIdx()), uint64_t(w_tail_aarch64[0]), 0 );
+        CodeGeneratorAArch64::movk(Xbyak_aarch64::XReg(reg_tail.cvt32().getIdx()), uint64_t(w_tail_aarch64[1]), 16);
+        CodeGeneratorAArch64::movk(Xbyak_aarch64::XReg(reg_tail.cvt32().getIdx()), uint64_t(w_tail_aarch64[2]), 32);
+        CodeGeneratorAArch64::movk(Xbyak_aarch64::XReg(reg_tail.cvt32().getIdx()), uint64_t(w_tail_aarch64[3]), 48);
+        CodeGeneratorAArch64::sub(X_TRANSLATOR_STACK, X_TRANSLATOR_STACK, 8);
+        CodeGeneratorAArch64::str(Xbyak_aarch64::XReg(reg_tail.cvt32().getIdx()), Xbyak_aarch64::ptr(X_TRANSLATOR_STACK));
+        CodeGeneratorAArch64::ldr(Xbyak_aarch64::PReg(k_tail_mask.getIdx()), Xbyak_aarch64::ptr(X_TRANSLATOR_STACK));
+        CodeGeneratorAArch64::add(X_TRANSLATOR_STACK, X_TRANSLATOR_STACK, 8);
+#else
         mov(reg_tail.cvt32(), tail_mask_);
         kmovw(k_tail_mask, reg_tail.cvt32());
+#endif
     }
 
     void generate() {
