@@ -18,7 +18,7 @@ job_1:
     - cd src/cpu/aarch64/xbyak_translator_aarch64/translator/third_party/
     - mkdir build_xed_aarch64
     - cd build_xed_aarch64/
-    - ../xed/mfile.py --strip=/usr/bin/aarch64-linux-gnu-strip  --cc=/usr/bin/aarch64-linux-gnu-gcc --cxx=/usr/bin/aarch64-linux-gnu-g++ --host-cpu=aarch64 --shared examples install
+    - ../xed/mfile.py --host-cpu=aarch64 --shared install
     - cd kits/
     - XED=`ls | grep install`
     - ln -sf $XED xed
