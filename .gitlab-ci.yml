@@ -30,5 +30,4 @@ job_1:
     - export LD_LIBRARY_PATH=${XED_ROOT_DIR}/lib:${LD_LIBRARY_PATH} && \
     - cmake -DDNNL_INDIRECT_JIT_AARCH64=ON ..
     - make -j48
-    - cd /
-    - ./gtest_all.sh
+    - make test
