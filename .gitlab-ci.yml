@@ -14,7 +14,7 @@ job_1:
   script:
 #    - pwd
 #    - ls
-
+    - export ONEDNN_ROOT_DIR=`pwd`
     - cd src/cpu/aarch64/xbyak_translator_aarch64/translator/third_party/
     - mkdir build_xed_aarch64
     - cd build_xed_aarch64/
@@ -24,13 +24,11 @@ job_1:
     - ln -sf $XED xed
     - cd xed
     - export XED_ROOT_DIR=`pwd`
-    - cd ../../../../
-    - source dot.zshrc.xbyak
-    - cd ../../../../../
+    - cd ${ONEDNN_ROOT_DIR}    
     - mkdir build
     - cd build
-    - export LD_LIBRARY_PATH=/github/workspace/src/cpu/aarch64/xbyak_translator_aarch64/translator/third_party/build_xed_aarch64/kits/xed/lib:${LD_LIBRARY_PATH} && \
-    - cmake -DDNNL_INDIRECT_JIT_AARCH64=ON -DDNNL_TARGET_ARCH=AARCH64 -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=AARCH64 -DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++  -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu ..
+    - export LD_LIBRARY_PATH=${XED_ROOT_DIR}/lib:${LD_LIBRARY_PATH} && \
+    - cmake -DDNNL_INDIRECT_JIT_AARCH64=ON ..
     - make -j48
     - cd /
     - ./gtest_all.sh
