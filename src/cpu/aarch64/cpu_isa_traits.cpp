@@ -51,6 +51,7 @@ bool init_max_cpu_isa() {
 
         IF_HANDLE_CASE(isa_all);
         ELSEIF_HANDLE_CASE(asimd);
+        ELSEIF_HANDLE_CASE(sve_256);
         ELSEIF_HANDLE_CASE(sve_512);
 
 #undef IF_HANDLE_CASE
@@ -71,6 +72,8 @@ struct isa_info_t {
     dnnl_cpu_isa_t convert_to_public_enum(void) const {
         switch (isa) {
             case sve_512:
+                return static_cast<dnnl_cpu_isa_t>(dnnl_cpu_isa_sve_512);
+            case sve_256:
                 return static_cast<dnnl_cpu_isa_t>(dnnl_cpu_isa_sve_512);
             case asimd: return static_cast<dnnl_cpu_isa_t>(dnnl_cpu_isa_asimd);
             default: return dnnl_cpu_isa_all;
@@ -93,6 +96,7 @@ static isa_info_t get_isa_info_t(void) {
 #define HANDLE_CASE(cpu_isa) \
     if (mayiuse(cpu_isa)) return isa_info_t(cpu_isa);
     HANDLE_CASE(sve_512);
+    HANDLE_CASE(sve_256);
     HANDLE_CASE(asimd);
 #undef HANDLE_CASE
     return isa_info_t(isa_any);
@@ -124,6 +128,7 @@ status_t set_max_cpu_isa(dnnl_cpu_isa_t isa) {
     switch (isa) {
         HANDLE_CASE(isa_all);
         HANDLE_CASE(asimd);
+        HANDLE_CASE(sve_256);
         HANDLE_CASE(sve_512);
         default: return invalid_arguments;
     }

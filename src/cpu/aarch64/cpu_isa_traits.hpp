@@ -106,6 +106,17 @@ struct cpu_isa_traits<asimd> {
 };
 
 template <>
+struct cpu_isa_traits<sve_256> {
+    typedef Xbyak_aarch64::ZRegS Vmm;
+    static constexpr int vlen_shift = 5;
+    static constexpr int vlen = 32;
+    static constexpr int n_vregs = 32;
+    static constexpr dnnl_cpu_isa_t user_option_val
+            = static_cast<dnnl_cpu_isa_t>(dnnl_cpu_isa_sve_256);
+    static constexpr const char *user_option_env = "SVE_256";
+};
+
+template <>
 struct cpu_isa_traits<sve_512> {
     typedef Xbyak_aarch64::ZReg TReg;
     typedef Xbyak_aarch64::ZRegB TRegB;
@@ -169,8 +180,9 @@ inline bool isa_has_bf16(cpu_isa_t isa) {
 #define JIT_IMPL_NAME_HELPER(prefix, isa, suffix_if_any) \
     ((isa) == isa_any ? prefix STRINGIFY(any) : \
     ((isa) == asimd ? prefix STRINGIFY(asimd) : \
+    ((isa) == sve_256 ? prefix STRINGIFY(sve_256) : \
     ((isa) == sve_512 ? prefix STRINGIFY(sve_512) : \
-    prefix suffix_if_any)))
+    prefix suffix_if_any))))
 /* clang-format on */
 
 } // namespace aarch64
