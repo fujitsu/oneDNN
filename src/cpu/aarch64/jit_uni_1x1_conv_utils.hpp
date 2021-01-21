@@ -290,8 +290,7 @@ struct rtus_driver_t : public jit_generator {
         sub(reg_ws, reg_ws, reg_os);
     }
 
-    void loop_is_nspc() {
-    }
+    void loop_is_nspc() {}
 
     void generate() {
         using namespace Xbyak_aarch64;
