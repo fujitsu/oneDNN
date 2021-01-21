@@ -54,13 +54,6 @@ void generate(jit_generator &code, Xbyak_aarch64::XReg reg_ctx,
     code.mov(sp_tmp2, reg_tmp);
     code.mov(reg_tmp, 1);
 
-#if 0
-    if (mayiuse(avx512_mic)) {
-        code.prefetchwt1(code.ptr[reg_ctx + BAR_CTR_OFF]);
-        code.prefetchwt1(code.ptr[reg_ctx + BAR_CTR_OFF]);
-    }
-#endif // #if 0
-
     code.add_imm(x_tmp_1, reg_ctx, BAR_CTR_OFF, x_tmp_1);
     code.ldaddal(reg_tmp, reg_tmp, ptr(x_tmp_1));
     code.add_imm(reg_tmp, reg_tmp, 1, x_tmp_0);
@@ -83,9 +76,7 @@ void generate(jit_generator &code, Xbyak_aarch64::XReg reg_ctx,
     code.cmp(reg_tmp, x_tmp_1);
     code.b(EQ, spin_label);
 
-//#ifdef DNNL_INDIRECT_JIT_AARCH64
     code.CodeGenerator::dmb(ISH);
-//#endif //#ifdef DNNL_INDIRECT_JIT_AARCH64
 
     code.CodeGenerator::L(barrier_exit_restore_label);
     code.mov(reg_tmp, sp_tmp1);

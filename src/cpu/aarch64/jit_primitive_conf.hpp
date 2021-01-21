@@ -34,7 +34,10 @@ enum class jit_memory_tag_kind_t { ncsp, nspc, blocked, undef };
 enum conv_version_t {
     ver_unused,
     ver_fma,
+    ver_sve_256,
+    ver_sve_512,
 };
+
 enum conv_loop_order_t {
     loop_cgn,
     loop_gnc,
@@ -191,6 +194,8 @@ struct jit_conv_conf_t {
     bool transpose_dst;
     int ic_block_step;
 
+    cpu_isa_t isa;
+
     bool is_hw_transp; // spatial dim height-width transposed
 };
 
@@ -283,32 +288,6 @@ struct jit_conv_call_s {
     int oc_flag;
 };
 
-struct jit_deconv_call_s {
-    const void *src; /* hack, non-const for backward_data */
-    const void *dst; /* hack, non-const for forward */
-    const void *filt; /* hack, non-const for backward_weights */
-    const void *bias; /* hack, non-const for backward_bias */
-    const void *scales;
-    const void *compensation;
-    /*
-     * ptr to table of void * elements that are pointers to post_op binary
-     * src1 tensors
-     */
-    const void *post_ops_binary_rhs_arg_vec;
-    /*
-     * logical (# of elems) offset to the processed output channel
-     * (for broadcasting [1,OC,1,1])
-     */
-    size_t oc_l_off;
-    size_t t_overflow;
-    size_t b_overflow;
-    size_t f_overflow;
-    size_t back_overflow;
-    size_t kh_padding;
-    size_t kd_padding;
-    size_t oc_blocks;
-};
-
 struct jit_dw_conv_call_s {
     const void *input;
     const void *output;
@@ -320,22 +299,6 @@ struct jit_dw_conv_call_s {
     size_t filter_pad_off;
     unsigned char
             exec_flags; /* Flags passed by driver execution to inner kernel */
-};
-
-struct jit_wino_transform_call_s {
-    size_t tile_block;
-    size_t tile_block_ur;
-    size_t nb_tile_block_ur;
-    size_t tile_count;
-    size_t tj;
-    size_t ti;
-    void *src;
-    void *dst;
-    void *Mw;
-    void *M;
-    void *T;
-    void *G;
-    void *bias;
 };
 
 struct jit_1x1_conv_conf_t {
@@ -379,9 +342,8 @@ struct jit_1x1_conv_conf_t {
     int load_grp_count;
     conv_1x1_loop_order_t loop_order;
     bool use_vmovntps;
-    /* avx512 core */
+    /* sve512 core */
     bool expl_bcast;
-    /* 4vnni */
     int typesize_in;
     int typesize_out;
     int typesize_bia;
@@ -494,58 +456,6 @@ struct jit_pool_call_s {
     float ker_area_h;
     size_t ur_bc; // contains number of channel blocks to processing
     size_t b_c; // contains number of channel blocks already processed
-};
-
-struct jit_resampling_conf_t {
-    unsigned ndims = 0;
-
-    unsigned id = 0, ih = 0, iw = 0;
-    unsigned od = 0, oh = 0, ow = 0;
-
-    unsigned stride_d = 0;
-    unsigned stride_h = 0;
-    unsigned stride_w = 0;
-    unsigned inner_stride = 0;
-
-    unsigned tail = 0;
-    unsigned simd_w = 0;
-
-    // The linear algorithm is an approximation of the point
-    // value based on the limit values. For one dimension,
-    // the approximation is based on the line, for two
-    // dimensions it will be a rectangle, and for three
-    // dimensions it will be a cuboid. Therefore,
-    // the possible variants for the number of corners are 2, 4, 8.
-    unsigned number_of_corners = 0;
-
-    bool is_data_size_bigger_than_L3 = false;
-    data_type_t data_type = data_type::undef;
-    size_t dt_size = 0;
-    size_t el_size_of_indices = 0;
-
-    jit_memory_tag_kind_t tag_kind = jit_memory_tag_kind_t::undef;
-    alg_kind_t alg = alg_kind::undef;
-
-    cpu_isa_t isa = isa_any;
-};
-
-struct jit_resampling_call_s {
-    size_t batch_of_sp_points_to_process = 0;
-
-    const void *src = nullptr;
-    const void *dst = nullptr;
-    const void *indices = nullptr;
-    const void *weights = nullptr;
-
-    size_t src_offset_top = 0;
-    size_t src_offset_bottom = 0;
-    size_t src_offset_front = 0;
-    size_t src_offset_back = 0;
-
-    float weight_top = 0.0f;
-    float weight_bottom = 0.0f;
-    float weight_front = 0.0f;
-    float weight_back = 0.0f;
 };
 
 } // namespace aarch64

@@ -1,6 +1,6 @@
 /*******************************************************************************
-* Copyright 2017-2020 Intel Corporation
-* Copyright 2020 FUJITSU LIMITED
+* Copyright 2020-2021 Intel Corporation
+* Copyright 2020-2021 FUJITSU LIMITED
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -30,11 +30,7 @@ namespace aarch64 {
 
 namespace simple_barrier {
 
-#ifdef _WIN32
-#define CTX_ALIGNMENT 64
-#else
 #define CTX_ALIGNMENT 4096
-#endif
 
 STRUCT_ALIGN(
         CTX_ALIGNMENT, struct ctx_t {

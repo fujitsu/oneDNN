@@ -401,6 +401,7 @@ void cpu_reducer_t<data_type>::reduce_nolock(int ithr, data_t *dst,
     const data_t *space
             = get_local_ptr(ithr - id_in_grp + 1, dst, scratchpad) + start * cl;
     const size_t len = nstl::min(end * cl, reduction_size) - start * cl;
+
     (*drv_)(d, space, 1, len);
 #endif
 }

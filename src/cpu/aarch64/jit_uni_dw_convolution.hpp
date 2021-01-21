@@ -1,5 +1,6 @@
 /*******************************************************************************
-* Copyright 2019-2020 Intel Corporation
+* Copyright 2021 Intel Corporation
+* Copyright 2021 FUJITSU LIMITED
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -96,7 +97,7 @@ private:
     std::unique_ptr<jit_uni_dw_conv_fwd_kernel<isa, src_type>> kernel_;
 };
 
-using jit_aarch64_sve_512_dw_convolution_fwd_t
+using jit_sve_512_dw_convolution_fwd_t
         = jit_uni_dw_convolution_fwd_t<sve_512, data_type::f32>;
 
 template <cpu_isa_t isa, data_type_t diff_dst_type,
@@ -171,7 +172,7 @@ private:
             kernel_;
 };
 
-using jit_aarch64_sve_512_dw_convolution_bwd_data_t
+using jit_sve_512_dw_convolution_bwd_data_t
         = jit_uni_dw_convolution_bwd_data_t<sve_512, data_type::f32>;
 
 template <cpu_isa_t isa, data_type_t src_type,
@@ -266,9 +267,9 @@ private:
     std::unique_ptr<jit_uni_dw_conv_bwd_weights_kernel<isa, src_type>> kernel_;
 };
 
-using jit_aarch64_sve_512_dw_convolution_bwd_weights_t
+using jit_sve_512_dw_convolution_bwd_weights_t
         = jit_uni_dw_convolution_bwd_weights_t<sve_512, data_type::f32>;
-using jit_aarch64_sve_256_dw_convolution_bwd_weights_t
+using jit_sve_256_dw_convolution_bwd_weights_t
         = jit_uni_dw_convolution_bwd_weights_t<sve_256, data_type::f32>;
 } // namespace aarch64
 } // namespace cpu
