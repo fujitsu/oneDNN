@@ -70,7 +70,7 @@ void jit_sve_512_1x1_convolution_fwd_t<src_type, wei_type,
     });
 
     if (pd()->wants_zero_pad_dst())
-        ctx.memory(DNNL_ARG_DST)->zero_pad(ctx.stream());
+        ctx.zero_pad_output(DNNL_ARG_DST);
 }
 
 template <data_type_t src_type, data_type_t wei_type, data_type_t dst_type>

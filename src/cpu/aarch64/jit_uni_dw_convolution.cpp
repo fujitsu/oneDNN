@@ -157,7 +157,7 @@ void jit_uni_dw_convolution_fwd_t<isa, src_type, dst_type>::execute_forward(
     });
 
     if (pd()->wants_zero_pad_dst())
-        ctx.memory(DNNL_ARG_DST)->zero_pad(ctx.stream());
+        ctx.zero_pad_output(DNNL_ARG_DST);
 }
 
 template struct jit_uni_dw_convolution_fwd_t<sve_512, data_type::f32>;
