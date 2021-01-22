@@ -23,19 +23,13 @@
 
 #include "cpu/aarch64/jit_generator.hpp"
 #include "cpu/aarch64/jit_primitive_conf.hpp"
+#include "cpu/aarch64/jit_op_imm_check.hpp"
 
 #define DISABLE_ELTWISE
 #ifndef DISABLE_ELTWISE
 #include "cpu/aarch64/jit_uni_eltwise_injector.hpp"
 #endif
 
-#define PRFMMIN 0
-#define PRFWMAX 31
-#define LDRMAX 255
-#define LDRWMAX 252
-#define ADDMAX 4095
-#define PRFMMAX 32760
-#define MOVMAX 65535
 
 using namespace Xbyak_aarch64;
 
@@ -59,7 +53,7 @@ struct jit_sve_512_1x1_conv_kernel : public jit_generator {
 #endif
         if (jcp.with_eltwise) {
 #ifndef DISABLE_ELTWISE
-            eltwise_injector_ = new jit_uni_eltwise_injector_f32<avx512_common>(
+            eltwise_injector_ = new jit_uni_eltwise_injector_f32<sve_512>(
                     this, jcp.eltwise);
 #endif
         }
@@ -176,7 +170,7 @@ private:
     }
 
 #ifndef DISABLE_ELTWISE
-    jit_uni_eltwise_injector_f32<avx512_common> *eltwise_injector_;
+    jit_uni_eltwise_injector_f32<sve_512> *eltwise_injector_;
 #endif
     void bcast_loop(int load_loop_blk);
     void reduce_loop(int load_loop_blk, int ur, int substep, bool wraparound);

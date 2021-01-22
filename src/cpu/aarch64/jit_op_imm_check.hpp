@@ -17,6 +17,7 @@
 #ifndef JIT_OP_IMM_CHECK_HPP
 #define JIT_OP_IMM_CHECK_HPP
 
+#define ADDMAX 4095
 #define LDRMAX 255
 #define LDRMIN (-256)
 #define STRMAX 255

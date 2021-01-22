@@ -29,7 +29,6 @@
 #include "cpu/aarch64/cpu_barrier.hpp"
 #include "cpu/platform.hpp"
 
-#include "cpu/aarch64/jit_op_imm_check.hpp"
 #include "cpu/aarch64/jit_sve_512_1x1_conv_kernel.hpp"
 
 #include "cpu/aarch64/jit_uni_1x1_conv_utils.hpp"
@@ -115,9 +114,6 @@ void jit_sve_512_1x1_conv_kernel::reduce_loop(
     const bool load_layout_nxc = is_load_layout_nxc(jcp);
     const bool bcast_layout_nxc = is_bcast_layout_nxc(jcp);
     const int reduce_dim_tail = jcp.reduce_dim % jcp.reduce_block;
-#if 0
-    const int load_dim_tail = jcp.load_dim % jcp.load_block;
-#endif
     auto vreg_bcast_s = [=](int idx) { return ZRegS(idx); };
 
     auto vreg_sum = [=]() { return ZReg(31); };
@@ -356,10 +352,6 @@ void jit_sve_512_1x1_conv_kernel::reduce_loop(
 
             for (int i_load = 0; i_load < load_loop_blk; i_load++)
                 for (int i_ur = 0; i_ur < ur; ++i_ur) {
-#if 0
-                 if (i_load + 1 == load_loop_blk && load_dim_tail)
-                    r = r | k_load_dim_mask | T_z;
-#endif
                     bias_load(i_load, i_ur);
                 }
             b(init_done);
@@ -385,10 +377,6 @@ void jit_sve_512_1x1_conv_kernel::reduce_loop(
         for (int i_ur = 0; i_ur < ur; ++i_ur)
             for (int i_load = 0; i_load < load_loop_blk; ++i_load) {
                 auto r = vreg_accum_s(i_load, i_ur);
-#if 0
-                if (i_load + 1 == load_loop_blk && load_dim_tail)
-                    r = r | k_load_dim_mask | T_z;
-#endif
                 prev_ofs = out_load(i_load, i_ur, prev_ofs);
                 fadd(r, r, vreg_sum_s());
             }
@@ -409,16 +397,6 @@ void jit_sve_512_1x1_conv_kernel::reduce_loop(
         prev_ofs = -1;
         for (int i_ur = 0; i_ur < ur; ++i_ur) {
             for (int i_load = 0; i_load < load_loop_blk; ++i_load) {
-                // for nxc_layout-bwd_w, weights are still padded and the
-                // output_ptr here can be uninitialized scratchpad.
-                // To ensure final output (after reduction) is zero-padded,
-                // here we zero-pad output by omitting the mask.
-#if 0
-                if (jcp.prop_kind != backward_weights
-                        && i_load + 1 == load_loop_blk && load_dim_tail) {
-                    vreg_acc = vreg_acc | k_load_dim_mask;
-                }
-#endif
                 prev_ofs = out_str(i_load, i_ur, prev_ofs);
             }
         }
@@ -444,10 +422,6 @@ void jit_sve_512_1x1_conv_kernel::reduce_loop(
                 i_reduce += reduce_step) { // IC
             for (int i_load = 0; i_load < load_loop_blk; ++i_load) { // OC
                 for (int i_fma = 0; i_fma < jcp.fma_step; i_fma++) {
-#if 0
-                    if (i_load + 1 == load_loop_blk && load_dim_tail)
-                        vreg = vreg | k_load_dim_mask | T_z;
-#endif
                     load_load(i_reduce + i_fma, i_load, i_fma);
                 }
             }
@@ -463,10 +437,6 @@ void jit_sve_512_1x1_conv_kernel::reduce_loop(
             for (int i_ur = 0; i_ur < ur; ++i_ur) {
 
                 for (int i_load = 0; i_load < load_loop_blk; ++i_load) {
-#if 0
-                    if (i_load + 1 == load_loop_blk && load_dim_tail)
-                        vreg_acc = vreg_acc | k_load_dim_mask | T_z;
-#endif
                     fmla(vreg_accum_s(i_load, i_ur), reg_p_all_ones,
                             vreg_load_s(i_load, 0),
                             vreg_bcast_s(bcast_reg_ofs
@@ -542,36 +512,10 @@ void jit_sve_512_1x1_conv_kernel::generate() {
     if (jcp.prop_kind == backward_weights)
         ldr(reg_output_stride, ptr(abi_param1, GET_OFF(output_stride)));
 
-    const int load_dim_tail = jcp.load_dim % jcp.load_block;
-
-    if (load_dim_tail) {
-#if 1
-        assert(NULL);
-#else
-        Reg32 reg_tail_32 = reg_load_dim_tail_mask.cvt32();
-        mov(reg_tail_32, (1 << load_dim_tail) - 1);
-        kmovw(k_load_dim_tail_mask, reg_tail_32);
-#endif
-    }
-
     auto load_loop_body = [=](int load_loop_blk) {
-#if 0
-        if (load_dim_tail)
-            kxnorw(k_load_dim_mask, k_load_dim_mask, k_load_dim_mask);
-#endif
         subs_imm(reg_load_loop_work, reg_load_loop_work,
                 load_loop_blk * jcp.load_loop_iter_step, reg_tmp_imm);
 
-        if (load_dim_tail) {
-#if 1
-            assert(NULL);
-#else
-            Label no_update_mask;
-            jge(no_update_mask, T_NEAR);
-            kmovw(k_load_dim_mask, k_load_dim_tail_mask);
-            L(no_update_mask);
-#endif
-        }
         bcast_loop(load_loop_blk);
         add_imm(reg_load_data, reg_load_data,
                 load_loop_blk * jcp.load_loop_load_step, reg_tmp_imm);
