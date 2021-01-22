@@ -139,7 +139,7 @@ void jit_sve_512_1x1_conv_kernel::reduce_loop(
         int ofs = jcp.typesize_out * jcp.oc_block * i_load;
         if (ldr_imm_check(ofs)) {
             ldr(vreg_accum(i_load, i_ur),
-                    ptr(reg_bias_data, static_cast<int32_t>(VL_OFS(ofs))));
+                    ptr(reg_bias_data, static_cast<int32_t>(VL64_OFS(ofs))));
         } else {
             add_imm(reg_tmp_ofs, reg_bias_data, ofs, reg_tmp_imm);
             ldr(vreg_accum(i_load, i_ur), ptr(reg_tmp_ofs));
@@ -204,7 +204,7 @@ void jit_sve_512_1x1_conv_kernel::reduce_loop(
         ofs = u1 * jcp.reduce_loop_load_step + jcp.typesize_in * ofs;
 
         if (ldr_imm_check(ofs)) {
-            ofs = VL_OFS(ofs);
+            ofs = VL64_OFS(ofs);
             ldr(vreg_load(i_load, i_fma),
                     ptr(aux_reg_load_data, static_cast<int32_t>(ofs)));
         } else {
@@ -237,16 +237,16 @@ void jit_sve_512_1x1_conv_kernel::reduce_loop(
         if (bwd_iload) mov(r, i_load);
         if (ldr_imm_check(ofs)) {
             if (bwd_iload) madd(r, r, reg_output_stride, aux_reg_output_data);
-            ldr(vreg_sum(), ptr(r, static_cast<int32_t>(VL_OFS(ofs))));
+            ldr(vreg_sum(), ptr(r, static_cast<int32_t>(VL64_OFS(ofs))));
         } else {
             if ((prev_ofs != -1) && ((ofs - prev_ofs) > 0)
-                    && (VL_OFS(ofs - prev_ofs) <= LDRMAX)) {
+                    && (VL64_OFS(ofs - prev_ofs) <= LDRMAX)) {
                 if (bwd_iload)
                     madd(r, r, reg_output_stride, reg_prev_out_addr);
                 else
                     r = reg_prev_out_addr;
                 ldr(vreg_sum(),
-                        ptr(r, static_cast<int32_t>(VL_OFS(ofs - prev_ofs))));
+                        ptr(r, static_cast<int32_t>(VL64_OFS(ofs - prev_ofs))));
             } else {
                 if ((prev_ofs != -1) && ((ofs - prev_ofs) > 0)) {
                     ofs = ofs - prev_ofs;
@@ -286,7 +286,7 @@ void jit_sve_512_1x1_conv_kernel::reduce_loop(
         if (str_imm_check(ofs)) {
             if (bwd_iload) madd(r, r, reg_output_stride, aux_reg_output_data);
             str(vreg_accum(i_load, i_ur),
-                    ptr(r, static_cast<int32_t>(VL_OFS(ofs))));
+                    ptr(r, static_cast<int32_t>(VL64_OFS(ofs))));
         } else {
             if ((prev_ofs != -1) && str_imm_check(ofs - prev_ofs)) {
                 if (bwd_iload)
@@ -294,7 +294,7 @@ void jit_sve_512_1x1_conv_kernel::reduce_loop(
                 else
                     r = reg_prev_out_addr;
                 str(vreg_accum(i_load, i_ur),
-                        ptr(r, static_cast<int32_t>(VL_OFS(ofs - prev_ofs))));
+                        ptr(r, static_cast<int32_t>(VL64_OFS(ofs - prev_ofs))));
             } else {
                 if ((prev_ofs != -1) && ((ofs - prev_ofs) > 0)) {
                     ofs = ofs - prev_ofs;
@@ -548,7 +548,7 @@ void jit_sve_512_1x1_conv_kernel::generate() {
         }
     };
 
-    const int simd_w = 16;
+    const int simd_w = cpu_isa_traits<sve_512>::vlen / sizeof(float);
 
     Label load_loop_blk[7];
 
@@ -853,7 +853,6 @@ status_t jit_sve_512_1x1_conv_kernel::init_conf(jit_1x1_conv_conf_t &jcp,
         min_regs = 6; // min # of ur_w
         size_threshold = 14;
         ur_step = 1; // step size of ur_w param checking
-        jcp.expl_bcast = true;
         jcp.ur = 1;
 
         //// TODO: Optimize bellow params
@@ -1054,10 +1053,8 @@ status_t jit_sve_512_1x1_conv_kernel::init_conf(jit_1x1_conv_conf_t &jcp,
             // if reduce_block is big then generated JIT code may be big
             // for small values of ur because reduce_loop_unroll = reduce_block
             jcp.ur = jcp.bcast_block / 2;
-            jcp.expl_bcast = true;
         } else {
             jcp.ur = jcp.bcast_block;
-            jcp.expl_bcast = false;
         }
 
         jcp.ur_tail = jcp.bcast_dim % jcp.bcast_block;

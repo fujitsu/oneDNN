@@ -39,7 +39,7 @@ namespace cpu {
 namespace aarch64 {
 
 /* Get vector offsets, ofs / VL(VL: 512bits = 64Bytes) */
-#define VL_OFS(ofs) ((ofs) >> 6)
+#define VL64_OFS(ofs) ((ofs) >> 6)
 
 struct jit_sve_512_1x1_conv_kernel : public jit_generator {
     jit_sve_512_1x1_conv_kernel(
@@ -47,10 +47,9 @@ struct jit_sve_512_1x1_conv_kernel : public jit_generator {
         : jcp(ajcp)
         , attr_(attr)
 #ifndef DISABLE_ELTWISE
-        , eltwise_injector_(nullptr) {
-#else
-    {
+        , eltwise_injector_(nullptr)
 #endif
+    {
         if (jcp.with_eltwise) {
 #ifndef DISABLE_ELTWISE
             eltwise_injector_ = new jit_uni_eltwise_injector_f32<sve_512>(
@@ -137,7 +136,7 @@ private:
                 default: assert(!"invalid prfop"); break;
             }
 
-            if ((ofs <= PRFMMAX) && (ofs >= 0)) {
+            if (prfm_imm_check(ofs)) {
                 prfm(op, ptr(in, static_cast<int32_t>(ofs)));
             } else {
                 add_imm(reg_tmp_ofs, in, ofs, reg_tmp_imm);
@@ -158,10 +157,9 @@ private:
                 default: assert(!"invalid prfop"); break;
             }
 
-            if ((VL_OFS(ofs) <= PRFWMAX)
-                    && (VL_OFS(ofs) >= (-1 * PRFWMAX - 1))) {
+            if(prfw_imm_check(ofs)){
                 prfw(op_sve, reg_p_all_ones,
-                        ptr(in, static_cast<int32_t>(VL_OFS(ofs))));
+                        ptr(in, static_cast<int32_t>(VL64_OFS(ofs))));
             } else {
                 add_imm(reg_tmp_ofs, in, ofs, reg_tmp_imm);
                 prfw(op_sve, reg_p_all_ones, ptr(reg_tmp_ofs));
