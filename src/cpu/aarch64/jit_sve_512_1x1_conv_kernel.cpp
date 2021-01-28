@@ -735,8 +735,7 @@ status_t jit_sve_512_1x1_conv_kernel::init_conf(jit_1x1_conv_conf_t &jcp,
 
     bool args_ok = true && jcp.ngroups == 1 && jcp.src_tag == required_dat_tag
             && jcp.dst_tag == required_dat_tag
-            && IMPLICATION(!is_data_layout_nxc,
-                    jcp.oc % simd_w == 0 && jcp.ic % simd_w == 0)
+            && (jcp.oc % simd_w == 0 && jcp.ic % simd_w == 0)
             && jcp.f_pad == 0 && jcp.t_pad == 0 && jcp.l_pad == 0
             && jcp.stride_w == 1 && jcp.stride_h == 1 && jcp.stride_d == 1
             && jcp.kd == 1 && jcp.kh == 1 && jcp.kw == 1 && jcp.ow == jcp.iw
@@ -1076,8 +1075,7 @@ status_t jit_sve_512_1x1_conv_kernel::init_conf(jit_1x1_conv_conf_t &jcp,
         load_blocking *= jcp.load_block;
 
         load_blocking_max = load_blocking;
-        assert(IMPLICATION(
-                !is_data_layout_nxc, jcp.load_dim % load_blocking == 0));
+        assert(jcp.load_dim % load_blocking == 0);
 
         int max_bcast_blocking = div_up(jcp.bcast_dim, jcp.bcast_block);
         int min_bcast_blocking = 5;
@@ -1087,8 +1085,7 @@ status_t jit_sve_512_1x1_conv_kernel::init_conf(jit_1x1_conv_conf_t &jcp,
                 bcast_blocking, min_bcast_blocking, max_bcast_blocking, false);
         bcast_blocking *= jcp.bcast_block;
         bcast_blocking_max = bcast_blocking;
-        assert(IMPLICATION(
-                !is_data_layout_nxc, jcp.bcast_dim % bcast_blocking == 0));
+        assert(jcp.bcast_dim % bcast_blocking == 0);
 
         // for reduction balance
         int max_reduce_blocking
