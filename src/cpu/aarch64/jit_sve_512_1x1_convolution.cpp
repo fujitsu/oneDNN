@@ -69,8 +69,7 @@ void jit_sve_512_1x1_convolution_fwd_t<src_type, wei_type,
                 dst, scratchpad);
     });
 
-    if (pd()->wants_zero_pad_dst())
-        ctx.zero_pad_output(DNNL_ARG_DST);
+    if (pd()->wants_zero_pad_dst()) ctx.zero_pad_output(DNNL_ARG_DST);
 }
 
 template <data_type_t src_type, data_type_t wei_type, data_type_t dst_type>
@@ -110,15 +109,12 @@ void jit_sve_512_1x1_convolution_fwd_t<src_type, wei_type,
     const int nb_ic_blocking = jcp.nb_reduce_blocking;
 
     // override some constants for fused dw_conv
-    const int os_block = jcp.with_dw_conv ? jcp.ow : jcp.bcast_block;
-    const int nb_bcast = jcp.with_dw_conv ? jcp.oh : jcp.nb_bcast;
-    const int nb_bcast_blocking = jcp.with_dw_conv ? 1 : jcp.nb_bcast_blocking;
-    const int nb_bcast_blocking_max
-            = jcp.with_dw_conv ? 1 : jcp.nb_bcast_blocking_max;
+    const int os_block = jcp.bcast_block;
+    const int nb_bcast = jcp.nb_bcast;
+    const int nb_bcast_blocking = jcp.nb_bcast_blocking;
+    const int nb_bcast_blocking_max = jcp.nb_bcast_blocking_max;
     const int nb_load_blocking = jcp.nb_load_blocking;
-    const int nb_load_blocking_max = jcp.with_dw_conv
-            ? jcp.nb_load_blocking
-            : jcp.nb_load_blocking_max;
+    const int nb_load_blocking_max = jcp.nb_load_blocking_max;
 
     // Begin: declare Variables needed for dw conv.
     memory_tracking::grantor_t dw_scratchpad(
@@ -181,8 +177,7 @@ void jit_sve_512_1x1_convolution_fwd_t<src_type, wei_type,
                 : g * nb_oc + ocb;
         const size_t dst_off = data_blk_off(dst_d, n, oc_off_idx, od, oh, ow);
 
-        p.output_data = jcp.with_dw_conv ? pbuf + (oh % jcp_dw_kh) * row_offset
-                                         : &dst[dst_off];
+        p.output_data = &dst[dst_off];
         p.bias_data
                 = &bias[oc_off_idx * (is_dst_layout_nxc ? 1 : jcp.oc_block)];
 
@@ -296,19 +291,13 @@ void jit_sve_512_1x1_convolution_fwd_t<src_type, wei_type,
             assert(!"unsupported loop order");
         }
     };
-    auto conv_dw = [&]() {};
 
-    if (jcp.with_dw_conv) {
-        conv_dw();
-    } else {
+    const int work_amount = jcp.mb * jcp.ngroups * jcp.nb_bcast;
+    int bcast_start {0}, bcast_end {0}, ocb_start {0}, ocb_end {0};
+    balance2D(nthr, ithr, work_amount, bcast_start, bcast_end, jcp.nb_load,
+            ocb_start, ocb_end, jcp.load_grp_count);
 
-        const int work_amount = jcp.mb * jcp.ngroups * jcp.nb_bcast;
-        int bcast_start {0}, bcast_end {0}, ocb_start {0}, ocb_end {0};
-        balance2D(nthr, ithr, work_amount, bcast_start, bcast_end, jcp.nb_load,
-                ocb_start, ocb_end, jcp.load_grp_count);
-
-        conv_1x1(bcast_start, bcast_end, ocb_start, ocb_end);
-    }
+    conv_1x1(bcast_start, bcast_end, ocb_start, ocb_end);
 }
 
 template struct jit_sve_512_1x1_convolution_fwd_t<data_type::f32>;
