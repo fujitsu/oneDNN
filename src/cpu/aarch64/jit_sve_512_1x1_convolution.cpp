@@ -116,16 +116,6 @@ void jit_sve_512_1x1_convolution_fwd_t<src_type, wei_type,
     const int nb_load_blocking = jcp.nb_load_blocking;
     const int nb_load_blocking_max = jcp.nb_load_blocking_max;
 
-    // Begin: declare Variables needed for dw conv.
-    memory_tracking::grantor_t dw_scratchpad(
-            scratchpad, memory_tracking::names::prefix_fusion);
-    dst_data_t *pbuf;
-    size_t row_offset;
-    const int jcp_dw_kh = 3;
-    const int nb_buffer = jcp.nb_load_blocking;
-    std::vector<dst_data_t *> addrs;
-    // End
-
     auto init_bcast = [&](int iwork, int bcast_end, int &n, int &g,
                               int &bcast_step, int &od, int &oh, int &ow,
                               int &id, int &ih, int &iw) {
