@@ -239,9 +239,9 @@ struct jit_conv_conf_t {
 
     int per_one_pstore;
 
-    int inp_buffer_size;
-    int wei_buffer_size;
-    int wsp_buffer_size;
+    size_t inp_buffer_size;
+    size_t wei_buffer_size;
+    size_t wsp_buffer_size;
 
     int nb_os;
     int nb_os_blocking;
@@ -249,6 +249,8 @@ struct jit_conv_conf_t {
     int os_tail;
     int os_blocked;
     int max_width;
+
+    bool transform_to_vnni;
 };
 
 // calculates filter size taking into account dilation
@@ -551,7 +553,6 @@ struct jit_1x1_conv_conf_t {
     bool with_dw_conv;
 
     post_ops_t post_ops;
-    post_ops_t::entry_t::eltwise_t eltwise;
 
     int is, os;
     int ic_block, oc_block;
