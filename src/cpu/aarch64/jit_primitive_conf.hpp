@@ -34,7 +34,6 @@ enum class jit_memory_tag_kind_t { ncsp, nspc, blocked, undef };
 enum conv_version_t {
     ver_unused,
     ver_fma,
-    ver_sve_256,
     ver_sve_512,
 };
 

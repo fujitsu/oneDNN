@@ -199,8 +199,6 @@ struct rtus_driver_t : public jit_generator {
                 case sve_512:
                     switch (typesize) {
                         case 4: res = ZReg(idx); break;
-                        //case 2: res = Ymm(idx); break;
-                        //case 1: res = Xmm(idx); break;
                         default:
                             assert(!"Not supported typesize");
                             res = ZReg(idx);
@@ -255,7 +253,7 @@ struct rtus_driver_t : public jit_generator {
             Label skip_h_step;
             add_imm(reg_cur_iw, reg_cur_iw, stride_w_, reg_tmp_imm);
             cmp(reg_cur_iw, iw_);
-            b(LT, skip_h_step); //jl(skip_h_step);
+            b(LT, skip_h_step);
 
             if (src_to_ws_) {
                 add_imm(reg_cur_src, reg_cur_src, (src_step_h_ - iw_) * vlen_,
@@ -275,14 +273,14 @@ struct rtus_driver_t : public jit_generator {
                 add_imm(reg_cur_src, reg_cur_src, stride_w_ * vlen_,
                         reg_tmp_imm);
                 cmp(reg_cur_src, reg_cur_src_fin);
-                b(LT, ih_loop); //jl(ih_loop);
+                b(LT, ih_loop);
             }
-            mov(reg_cur_iw, 0); //xor_(reg_cur_iw, reg_cur_iw);
+            mov(reg_cur_iw, 0);
             L(skip_h_step);
         }
 
         subs_imm(reg_cur_os, reg_cur_os, vlen_, reg_tmp_imm);
-        b(NE, is_loop); //jnz(is_loop);
+        b(NE, is_loop);
 
         /* restore dst */
         sub(reg_ws, reg_ws, reg_os);
@@ -310,7 +308,7 @@ struct rtus_driver_t : public jit_generator {
             switch (reg_zero.getBit() / 8) {
                 case 64 /*ZReg*/: {
                     Xbyak_aarch64::ZRegS zreg_s(reg_zero.getIdx());
-                    eor(zreg_s); // zero clear
+                    eor(zreg_s, 0); // zero clear
                     break;
                 }
                 default: assert(!"rtus kernel failure");
