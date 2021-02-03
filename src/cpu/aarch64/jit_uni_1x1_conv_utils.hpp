@@ -76,7 +76,6 @@ inline void rtus_prepare(conv_pd_t *self, const convolution_desc_t *&conv_d,
             = utils::one_of(dat_tag, format_tag::nwc, format_tag::nhwc);
     if (is_nspc && !mayiuse(sve_256)) return;
 
-#if 1
     // rtus is applicable, configure it.
     self->rtus_.reduce_src_ = true;
     conv_d = &(self->rtus_.conv_d_ = *conv_d);
@@ -100,7 +99,6 @@ inline void rtus_prepare(conv_pd_t *self, const convolution_desc_t *&conv_d,
         memory_desc_wrapper::compute_blocking(
                 self->rtus_.conv_d_.src_desc, dat_tag);
     }
-#endif
 }
 
 template <typename conv_pd_t>
@@ -310,15 +308,9 @@ struct rtus_driver_t : public jit_generator {
 
         if (!src_to_ws_) {
             switch (reg_zero.getBit() / 8) {
-                //case 16 /*xmm*/: uni_vpxor(reg_zero, reg_zero, reg_zero); break;
-                //case 32 /*ymm*/: {
-                //    Xbyak::Ymm ymm_z(reg_zero.getIdx());
-                //    uni_vpxor(ymm_z, ymm_z, ymm_z);
-                //    break;
-                //}
-                case 64 /*zmm*/: {
+                case 64 /*ZReg*/: {
                     Xbyak_aarch64::ZRegS zreg_s(reg_zero.getIdx());
-                    fmov(zreg_s); // zero clear
+                    eor(zreg_s); // zero clear
                     break;
                 }
                 default: assert(!"rtus kernel failure");
@@ -326,7 +318,6 @@ struct rtus_driver_t : public jit_generator {
         }
         if (is_nspc_) {
             assert(!"loop_is_nspc error");
-            //loop_is_nspc();
         } else {
             lsl(reg_os, reg_os, vlen_shift_);
 
@@ -339,10 +330,9 @@ struct rtus_driver_t : public jit_generator {
             add_imm(reg_src, reg_src, src_step_icb_ * vlen_, reg_tmp_imm);
 
             subs_imm(reg_icb, reg_icb, vlen_ / typesize_, reg_tmp_imm);
-            b(NE, icb_loop); //jnz(icb_loop, T_NEAR);
+            b(NE, icb_loop);
         }
 
-        //uni_vzeroupper();
         postamble();
     }
 };
