@@ -180,12 +180,6 @@ struct rtus_driver_t : public jit_generator {
 
         assert(ic_ > 0);
 
-        /*FIXME: derive Vmm type on compile time.
-         * changing register type  on runtime
-         * seems dangerous,and some xbyak functions might
-         * fail to work on reg_v, reg_zero because of this
-         * data_type change, e.g. uni_vpxor doen't
-         * work on reg_zero now*/
         auto Vmm = [=](int idx, size_t typesize) {
             ZReg res = ZReg(idx);
             if (is_nspc_) {
