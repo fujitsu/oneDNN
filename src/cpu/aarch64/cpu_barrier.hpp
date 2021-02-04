@@ -70,7 +70,7 @@ void barrier(ctx_t *ctx, int nthr);
  *   reg_nnthr -- read-only register with the # of synchronizing threads
  */
 void generate(jit_generator &code, Xbyak_aarch64::XReg reg_ctx,
-        Xbyak_aarch64::XReg reg_nthr);
+        Xbyak_aarch64::XReg reg_nthr, bool usedAsFunc = false);
 
 } // namespace simple_barrier
 
